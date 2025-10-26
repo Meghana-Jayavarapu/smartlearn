@@ -1,4 +1,4 @@
-// server.js
+// D:\MERN\lms\lms\backend\server.js
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -9,7 +9,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 
 // Import your routes
-import authRoutes from './routes/auth.js'; // Make sure this file exists
+import authRoutes from './routes/auth.js'; // ensure this path is correct
 
 const app = express();
 
@@ -18,21 +18,41 @@ app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
 
+// CORS config: allows no-origin (curl/Postman) for testing now.
+// Later, set FRONTEND_URL in Render and remove the !origin allow if you want strict security.
 const corsOptions = {
-  origin: 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (Postman/curl/server-to-server)
+    if (!origin) return callback(null, true);
+
+    const whitelist = [
+      process.env.FRONTEND_URL,    // set this in Render when frontend is deployed
+      'http://localhost:3000',
+      'http://127.0.0.1:3000'
+    ].filter(Boolean);
+
+    if (whitelist.includes(origin)) return callback(null, true);
+
+    return callback(new Error('Not allowed by CORS'), false);
+  },
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization','x-auth-token','Accept','Origin'],
   exposedHeaders: ['x-auth-token','Authorization'],
   credentials: true,
-  maxAge: 86400,
+  maxAge: 86400
 };
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-// --- MongoDB Connection ---
-const mongoUri = process.env.MONGODB_URI;
+// --- Request Logger (logs origin) ---
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path} - origin: ${req.headers.origin}`);
+  next();
+});
 
+// --- MongoDB Connection ---
+const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/lms';
 mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -44,9 +64,9 @@ mongoose.connect(mongoUri, {
 });
 
 // --- Routes ---
-app.use('/api/auth', authRoutes); // Authentication routes
+app.use('/api/auth', authRoutes); // Authentication routes (ensure authRoutes exports a router)
 
-// --- Demo Courses Data ---
+// --- Demo Courses Data (fixed syntax + no duplicate trailing commas) ---
 const courses = [
   {
     _id: 'c101',
@@ -101,10 +121,7 @@ const courses = [
     thumbnail: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/tensorflow/tensorflow-original.svg',
     description: 'Learn deep learning, neural networks, and AI models...',
     syllabus: ['Neural Networks', 'CNN', 'RNN', 'TensorFlow', 'PyTorch', 'Projects']
-  }
-  
-];
-courses.push(
+  },
   {
     _id: 'c107',
     title: 'Machine Learning with Python',
@@ -131,18 +148,17 @@ courses.push(
     thumbnail: 'https://cdn-icons-png.flaticon.com/512/2306/2306268.png',
     description: 'Understand network security, encryption, and basic cybersecurity practices.',
     syllabus: ['Network Security', 'Encryption', 'Penetration Testing', 'Firewalls', 'Projects']
-  });
-  courses.push({
-    _id: 'c107',
+  },
+  {
+    _id: 'c110',
     title: 'Data Structures & Algorithms',
     category: 'Programming',
     level: 'Intermediate',
     thumbnail: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg',
     description: 'Master DSA concepts, problem-solving techniques, and interview preparation.',
     syllabus: ['Arrays & Strings', 'Linked Lists', 'Stacks & Queues', 'Trees', 'Graphs', 'Sorting', 'Searching', 'Dynamic Programming']
-  },
-);
-
+  }
+];
 
 // Store enrolled courses per user session (mock)
 let enrolledCourses = [];
@@ -169,12 +185,17 @@ app.post('/api/courses/enroll/:id', (req, res) => {
 // --- Health Route ---
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
-// --- Request Logger ---
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path} - origin: ${req.headers.origin}`);
-  next();
+// --- Global error handler for CORS rejection and others ---
+app.use((err, req, res, next) => {
+  if (err && err.message && err.message.includes('CORS')) {
+    return res.status(403).json({ ok: false, message: 'CORS error: ' + err.message });
+  }
+  console.error('Server error:', err);
+  return res.status(500).json({ ok: false, message: 'Internal server error' });
 });
 
 // --- Start Server ---
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+});
