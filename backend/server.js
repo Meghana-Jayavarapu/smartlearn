@@ -20,30 +20,32 @@ app.use(cookieParser());
 
 // CORS config: allows no-origin (curl/Postman) for testing now.
 // Later, set FRONTEND_URL in Render and remove the !origin allow if you want strict security.
+
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL, // keep if set
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+].filter(Boolean);
+
 const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (Postman/curl/server-to-server)
+  origin: function(origin, callback) {
+    // allow requests with no origin (curl/postman)
     if (!origin) return callback(null, true);
-
-    const whitelist = [
-      process.env.FRONTEND_URL,    // set this in Render when frontend is deployed
-      'http://localhost:3000',
-      'http://127.0.0.1:3000'
-    ].filter(Boolean);
-
-    if (whitelist.includes(origin)) return callback(null, true);
-
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // for debugging, log rejected origin
+    console.warn('CORS blocked origin:', origin);
     return callback(new Error('Not allowed by CORS'), false);
   },
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization','x-auth-token','Accept','Origin'],
-  exposedHeaders: ['x-auth-token','Authorization'],
   credentials: true,
   maxAge: 86400
 };
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
+app.use(helmet());
 
 // --- Request Logger (logs origin) ---
 app.use((req, res, next) => {
