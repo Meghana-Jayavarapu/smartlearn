@@ -6,7 +6,6 @@ import {
   Container, TextField, Button, Typography, Box, Snackbar, Alert, CircularProgress,
 } from '@mui/material';
 
-const API_BASE = process.env.REACT_APP_API_URL;;
 
 const LoginForm = ({ onLogin }) => {
   const navigate = useNavigate();
