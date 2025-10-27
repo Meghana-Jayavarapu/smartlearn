@@ -33,7 +33,7 @@ const CourseDetails = ({ refreshDashboard }) => {
       return;
     }
     try {
-      const res = await axios.post(
+      const { data } = await axios.post(
         `${API_BASE}/courses/enroll/${id}`,
         {},
         {
