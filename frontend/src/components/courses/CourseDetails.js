@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Box, Typography, Button, Card, CardContent, CardMedia,  } from '@mui/material';
 
-const API_BASE = process.env.REACT_APP_API_URL;;
+
 
 const CourseDetails = ({ refreshDashboard }) => {
   const { id } = useParams();
