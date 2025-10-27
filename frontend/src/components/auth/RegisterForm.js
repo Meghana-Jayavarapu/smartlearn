@@ -6,7 +6,6 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE = process.env.REACT_APP_API_URL;;
 
 const RegisterForm = ({ onLogin }) => {
   const navigate = useNavigate();
