@@ -16,7 +16,7 @@ const CourseDetails = ({ refreshDashboard }) => {
   useEffect(() => {
     const fetchCourse = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/courses`);
+        const { data } = await axios.get(`${API_BASE}/courses`);
         const found = res.data.find(c => c._id === id);
         setCourse(found || null);
       } catch (err) {
