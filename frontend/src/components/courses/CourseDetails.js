@@ -34,10 +34,10 @@ const CourseDetails = ({ refreshDashboard }) => {
     }
     try {
       const res = await axios.post(
-        `${process.env.REACT_APP_API_URL}/courses/enroll/${id}`,
+        `${API_BASE}/courses/enroll/${id}`,
         {},
         {
-          headers: { Authorization: token },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
       setEnrolled(true);
