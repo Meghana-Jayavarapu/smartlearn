@@ -29,7 +29,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-const API_BASE = process.env.REACT_APP_API_URL;;
+
 
 // prettier-friendly fallback courses with logos (logo: small square icon)
 const fallbackCourses = [
