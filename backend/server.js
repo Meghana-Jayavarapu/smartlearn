@@ -22,7 +22,8 @@ app.use(cookieParser());
 const allowedOrigins = [
   process.env.FRONTEND_URL, // set this in production (Netlify/Render)
   'http://localhost:3000',
-  'http://127.0.0.1:3000'
+  'http://127.0.0.1:3000',
+  'https://smartlearn28.netlify.app'
 ].filter(Boolean);
 
 const corsOptions = {
