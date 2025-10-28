@@ -53,7 +53,7 @@ const Profile = () => {
         return;
       }
 
-      const res = await axios.get(`${API_URL}/api/auth/profile`, {
+      const { data } = await axios.get(`${API_URL}/api/auth/profile`, {
         headers: { 'x-auth-token': token },
         timeout: 10000, // 10s timeout
       });

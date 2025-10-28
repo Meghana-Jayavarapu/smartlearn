@@ -87,7 +87,7 @@ const CourseList = () => {
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/courses?${params}`, { headers });
+      const { data } = await axios.get(`${process.env.REACT_APP_API_URL}/courses?${params}`, { headers });
       
       // Handle both response formats (array or paginated object)
       if (Array.isArray(response.data)) {

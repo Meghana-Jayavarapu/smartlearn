@@ -21,13 +21,13 @@ const RegisterForm = ({ onLogin }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/auth/register`, {
+      const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/auth/register`, {
         name: form.name,
         email: form.email,
         password: form.password,
       });
 
-      const { token, user } = res.data || {};
+      const { token, user } = data || {};
       if (!token) throw new Error('No token returned from server');
 
       // update app-level auth (immediate nav update)

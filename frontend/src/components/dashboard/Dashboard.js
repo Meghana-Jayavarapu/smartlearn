@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+// src/components/dashboard/Dashboard.js
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { Box, Typography, Grid, Paper } from '@mui/material';
 import SchoolIcon from '@mui/icons-material/School';
@@ -9,24 +10,44 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
 import { useNavigate } from 'react-router-dom';
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const Dashboard = () => {
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchEnrolledCourses = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:5000/api/courses/enrolled', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setEnrolledCourses(res.data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchEnrolledCourses();
+  const fetchEnrolledCourses = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const { data } = await axios.get(`${API_BASE}/courses/enrolled`, { headers });
+
+      let list = [];
+      if (Array.isArray(data)) list = data;
+      else if (Array.isArray(data.courses)) list = data.courses;
+      else if (Array.isArray(data.enrolled)) list = data.enrolled;
+      else if (Array.isArray(data.data)) list = data.data;
+      else list = Array.isArray(data) ? data : (data ? [data] : []);
+
+      setEnrolledCourses(list);
+    } catch (err) {
+      console.error('Error fetching enrolled courses:', err);
+      setEnrolledCourses([]);
+    }
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    if (mounted) fetchEnrolledCourses();
+
+    const handler = () => { if (mounted) fetchEnrolledCourses(); };
+    window.addEventListener('enrolledCoursesUpdated', handler);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('enrolledCoursesUpdated', handler);
+    };
+  }, [fetchEnrolledCourses]);
 
   const dashboardOptions = [
     { title: 'Messages', icon: <ChatIcon fontSize="large" />, path: '/messages' },
@@ -47,16 +68,15 @@ const Dashboard = () => {
       ) : (
         <Grid container spacing={3} sx={{ mb: 4 }}>
           {enrolledCourses.map(course => (
-            <Grid item xs={12} md={4} key={course._id}>
+            <Grid item xs={12} md={4} key={course._id || course.id}>
               <Paper
                 elevation={3}
                 sx={{
                   p: 2,
                   cursor: 'pointer',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  '&:hover': { transform: 'translateY(-5px)', boxShadow: '0 8px 20px rgba(0,0,0,0.15)' },
+                  transition: 'box-shadow 0.2s',
                 }}
-                onClick={() => navigate(`/courses/${course._id}`)}
+                onClick={() => navigate(`/courses/${course._id || course.id}`)}
               >
                 <img
                   src={course.thumbnail}
@@ -89,8 +109,6 @@ const Dashboard = () => {
                 p: 4,
                 cursor: 'pointer',
                 textAlign: 'center',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': { transform: 'translateY(-5px)', boxShadow: '0 8px 20px rgba(0,0,0,0.15)' },
               }}
               onClick={() => navigate(opt.path)}
             >

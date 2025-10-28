@@ -142,10 +142,10 @@ const Courses = () => {
     const fetchCourses = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`${API_BASE}/courses`);
-        if (mounted && Array.isArray(res.data) && res.data.length > 0) {
+        const { data } = await axios.get(`${API_BASE}/courses`);
+        if (mounted && Array.isArray(data) && data.length > 0) {
           // ensure logo field exists for backend entries (optional)
-          const normalized = res.data.map(c => ({ ...c, logo: c.logo || c.thumbnail }));
+          const normalized = data.map(c => ({ ...c, logo: c.logo || c.thumbnail }));
           setCourses(normalized);
         } else if (mounted) {
           setCourses(fallbackCourses);

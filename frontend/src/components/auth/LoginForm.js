@@ -21,8 +21,8 @@ const LoginForm = ({ onLogin }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post(`${process.env.REACT_APP_API_URL}/auth/login`, { email, password });
-      const { token, user } = res.data || {};
+      const { data } = await axios.post(`${process.env.REACT_APP_API_URL}/auth/login`, { email, password });
+      const { token, user } = data || {};
       if (!token) throw new Error('No token returned from server');
 
       // call onLogin passed from App.js (updates nav immediately)
