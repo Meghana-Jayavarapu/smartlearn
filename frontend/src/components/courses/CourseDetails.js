@@ -8,6 +8,15 @@ import {
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
+function buildUrl(path) {
+  const base = String(API_BASE).replace(/\/+$/, '');
+  let p = String(path).replace(/^\/+/, '');
+  if (base.toLowerCase().endsWith('/api') && /^api\/?/i.test(p)) {
+    p = p.replace(/^api\/?/i, '');
+  }
+  return `${base}/${p}`;
+}
+
 const CourseDetails = ({ refreshDashboard }) => {
   const { id } = useParams();
   const [course, setCourse] = useState(null);
@@ -18,28 +27,46 @@ const CourseDetails = ({ refreshDashboard }) => {
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    const fetchCourse = async () => {
+    const fetchCourseFromList = async () => {
       setLoading(true);
       try {
-        try {
-          const { data } = await axios.get(`${API_BASE}/courses/${id}`);
-          const foundCourse = data.course || data;
-          setCourse(foundCourse || null);
-        } catch (singleErr) {
-          const { data } = await axios.get(`${API_BASE}/courses`);
-          const list = Array.isArray(data) ? data : (data.courses || []);
-          const found = list.find(c => String(c._id) === String(id));
-          setCourse(found || null);
+        const url = buildUrl('/api/courses');
+        const { data } = await axios.get(url);
+        const list = Array.isArray(data) ? data : (data.courses || []);
+
+        // Matching strategies (in order)
+        const matches = (c) => {
+          if (!c) return false;
+          const cid = String(c._id ?? c.id ?? '');
+          if (cid === String(id)) return true;
+          if (String(parseInt(cid || '', 10)) === String(parseInt(id || '', 10))) return true;
+          const slug = (c.slug || '').toString().toLowerCase();
+          if (slug && slug === String(id).toLowerCase()) return true;
+          if (cid.includes(String(id))) return true;
+          if ((c.title || '').toLowerCase().includes(String(id).toLowerCase())) return true;
+          return false;
+        };
+
+        const found = list.find(matches);
+        if (found) {
+          setCourse(found);
+        } else {
+          setSnack({
+            open: true,
+            severity: 'warning',
+            msg: 'Course not found — server returned the list but no matching id.',
+          });
+          setCourse(null);
         }
       } catch (err) {
-        console.error('Error fetching course:', err);
+        setSnack({ open: true, severity: 'error', msg: 'Failed to load course list (network/CORS).' });
         setCourse(null);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCourse();
+    fetchCourseFromList();
   }, [id]);
 
   const handleCloseSnack = () => setSnack(s => ({ ...s, open: false }));
@@ -51,19 +78,16 @@ const CourseDetails = ({ refreshDashboard }) => {
     }
     try {
       await axios.post(
-        `${API_BASE}/courses/enroll/${id}`,
+        buildUrl(`/api/courses/enroll/${id}`),
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       setEnrolled(true);
       if (typeof refreshDashboard === 'function') refreshDashboard();
       window.dispatchEvent(new Event('enrolledCoursesUpdated'));
-
       setSnack({ open: true, severity: 'success', msg: 'Enrolled successfully' });
     } catch (err) {
-      console.error('Enroll error:', err);
-      setSnack({ open: true, severity: 'error', msg: err.response?.data?.message || 'Enroll failed' });
+      setSnack({ open: true, severity: 'error', msg: err?.response?.data?.message || 'Enroll failed' });
     }
   };
 
@@ -101,7 +125,12 @@ const CourseDetails = ({ refreshDashboard }) => {
         </CardContent>
       </Card>
 
-      <Snackbar open={snack.open} autoHideDuration={3500} onClose={handleCloseSnack} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={3500}
+        onClose={handleCloseSnack}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
         <Alert onClose={handleCloseSnack} severity={snack.severity} sx={{ width: '100%' }}>
           {snack.msg}
         </Alert>

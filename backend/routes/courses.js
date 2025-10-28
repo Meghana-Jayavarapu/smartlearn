@@ -1,45 +1,61 @@
+// backend/routes/courses.js
 import express from 'express';
-const router = express.Router();
 import auth from '../middleware/auth.js';
 import Course from '../models/Course.js';
-import User from '../models/User.js';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+const router = express.Router();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Configure multer for file upload
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = 'uploads/';
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
+// Return all courses (no limit)
+router.get('/', async (req, res) => {
+  try {
+    // If you're using a DB model:
+    const courses = await Course.find({});
+    return res.json(courses);
+  } catch (err) {
+    console.error('/api/courses error', err);
+    return res.status(500).json({ message: 'Server error' });
   }
 });
 
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4'];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type. Only JPEG, PNG, GIF and MP4 files are allowed.'));
-    }
+// Single course
+router.get('/:id', async (req, res) => {
+  try {
+    const course = await Course.findOne({ $or: [{ _id: req.params.id }, { id: req.params.id }] });
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    return res.json(course);
+  } catch (err) {
+    console.error('/api/courses/:id error', err);
+    return res.status(500).json({ message: 'Server error' });
   }
 });
 
-// (All your route handlers remain unchanged)
+// Mock enrolled list (per server instance)
+let enrolledCourses = [];
+router.get('/enrolled/list', (req, res) => res.json(enrolledCourses));
 
-// Export router as ESM
+// Enroll (mock)
+router.post('/enroll/:id', auth, async (req, res) => {
+  try {
+    const course = await Course.findOne({ $or: [{ _id: req.params.id }, { id: req.params.id }] });
+    if (!course) return res.status(404).json({ message: 'Course not found' });
+    if (!enrolledCourses.some(c => String(c._id) === String(course._id))) enrolledCourses.push(course);
+    return res.json({ message: 'Enrolled successfully', enrolledCourses });
+  } catch (err) {
+    console.error('/api/courses/enroll error', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Optional: create course (admin)
+router.post('/', auth, async (req, res) => {
+  try {
+    const payload = req.body;
+    const course = new Course(payload);
+    await course.save();
+    return res.status(201).json(course);
+  } catch (err) {
+    console.error('create course error', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
 export default router;

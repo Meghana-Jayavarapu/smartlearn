@@ -28,31 +28,101 @@ import SchoolIcon from '@mui/icons-material/School';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-// Ensure API base works both locally and in Netlify
-const API_BASE = (process.env.REACT_APP_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
+const API_BASE = process.env.REACT_APP_API_URL;
 
-function buildUrl(path) {
-  // build a safe URL without duplicate /api segments
-  const p = path.replace(/^\/+/, '');
-  if (API_BASE.toLowerCase().endsWith('/api') && /^api\/?/i.test(p)) {
-    return `${API_BASE}/${p.replace(/^api\/?/i, '')}`;
-  }
-  return `${API_BASE}/${p}`;
-}
-
-// prettier-friendly fallback courses (kept as fallback only)
+// prettier-friendly fallback courses with logos (logo: small square icon)
 const fallbackCourses = [
-  { _id: 'c101', title: 'Full Stack Web Development with React & Node.js', category: 'Web Development', level: 'Beginner', logo: 'https://raw.githubusercontent.com/devicons/devicon/master/icons/react/react-original.svg', thumbnail: 'https://raw.githubusercontent.com/github/explore/main/topics/react/react.png', description: 'Build modern web apps with React frontend and Node/Express backend. Projects + deployment.', syllabus: ['HTML & CSS', 'JS', 'React', 'Node.js', 'Express', 'MongoDB'], createdAt: '2024-08-01' },
-  { _id: 'c102', title: 'Python for Data Science & ML', category: 'Data Science', level: 'Intermediate', logo: 'https://raw.githubusercontent.com/devicons/devicon/master/icons/python/python-original.svg', thumbnail: 'https://raw.githubusercontent.com/github/explore/main/topics/python/python.png', description: 'Hands-on Python, pandas, visualization and introductory machine learning workflows.', syllabus: ['Python', 'pandas', 'Visualization', 'scikit-learn', 'Model Eval'], createdAt: '2024-09-10' },
-  { _id: 'c103', title: 'Java Programming Masterclass', category: 'Programming', level: 'Beginner', logo: 'https://raw.githubusercontent.com/devicons/devicon/master/icons/java/java-original.svg', thumbnail: 'https://raw.githubusercontent.com/github/explore/main/topics/java/java.png', description: 'Java fundamentals, OOP, collections, concurrency and practical projects.', syllabus: ['Java Basics', 'OOP', 'Collections', 'Concurrency'], createdAt: '2024-05-21' },
-  { _id: 'c104', title: 'Mobile App Development with Flutter', category: 'Mobile Development', level: 'Intermediate', logo: 'https://raw.githubusercontent.com/devicons/devicon/master/icons/flutter/flutter-original.svg', thumbnail: 'https://raw.githubusercontent.com/github/explore/main/topics/flutter/flutter.png', description: 'Build cross-platform mobile apps with Flutter and Dart — state management & deployment.', syllabus: ['Dart', 'Widgets', 'State Management', 'Networking'], createdAt: '2024-07-12' },
-  { _id: 'c105', title: 'DevOps Fundamentals with Docker & Kubernetes', category: 'DevOps', level: 'Advanced', logo: 'https://raw.githubusercontent.com/devicons/devicon/master/icons/docker/docker-original.svg', thumbnail: 'https://raw.githubusercontent.com/github/explore/main/topics/docker/docker.png', description: 'Containerization, orchestration, CI/CD, monitoring and scaling for production systems.', syllabus: ['Docker', 'Kubernetes', 'CI/CD', 'Monitoring'], createdAt: '2024-06-02' },
-  { _id: 'c106', title: 'Deep Learning & Neural Networks (AI)', category: 'AI & Deep Learning', level: 'Advanced', logo: 'https://raw.githubusercontent.com/konstantinmuenster/logo-icons/master/images/tensorflow.png', thumbnail: 'https://miro.medium.com/v2/resize:fit:1200/1*ZQFZKZ7iM6r-mtMV3J0Rlg.png', description: 'Neural networks, CNNs, RNNs and transformers with TensorFlow/PyTorch — practical projects.', syllabus: ['Neural Nets', 'CNN', 'RNN', 'Transformers', 'Deployment'], createdAt: '2024-10-01' },
-  { _id: 'c107', title: 'UI/UX Design Principles', category: 'Design', level: 'Beginner', logo: 'https://upload.wikimedia.org/wikipedia/commons/3/33/Figma-logo.svg', thumbnail: 'https://images.unsplash.com/photo-1503602642458-232111445657?w=1200&q=80&auto=format&fit=crop', description: 'Designa fundamentals, wireframing, prototyping and user testing using Figma and best practices.', syllabus: ['Design Thinking', 'Wireframes', 'Prototyping', 'User Research'], createdAt: '2024-04-18' },
-  { _id: 'c108', title: 'Cloud Engineering with AWS', category: 'Cloud', level: 'Intermediate', logo: 'https://a0.awsstatic.com/libra-css/images/logos/aws_smile_1200x630.png', thumbnail: 'https://images.unsplash.com/photo-1526378723414-7a88a1b7f3b9?w=1200&q=80&auto=format&fit=crop', description: 'Core AWS services, IaC, security, and deploying production workloads at scale.', syllabus: ['EC2 & S3', 'IAM', 'VPC', 'CloudFormation', 'CI/CD'], createdAt: '2024-03-30' },
+  {
+    _id: 'c101',
+    title: 'Full Stack Web Development with React & Node.js',
+    category: 'Web Development',
+    level: 'Beginner',
+    logo: 'https://raw.githubusercontent.com/devicons/devicon/master/icons/react/react-original.svg',
+    thumbnail: 'https://raw.githubusercontent.com/github/explore/main/topics/react/react.png',
+    description: 'Build modern web apps with React frontend and Node/Express backend. Projects + deployment.',
+    syllabus: ['HTML & CSS', 'JS', 'React', 'Node.js', 'Express', 'MongoDB'],
+    createdAt: '2024-08-01',
+  },
+  {
+    _id: 'c102',
+    title: 'Python for Data Science & ML',
+    category: 'Data Science',
+    level: 'Intermediate',
+    logo: 'https://raw.githubusercontent.com/devicons/devicon/master/icons/python/python-original.svg',
+    thumbnail: 'https://raw.githubusercontent.com/github/explore/main/topics/python/python.png',
+    description: 'Hands-on Python, pandas, visualization and introductory machine learning workflows.',
+    syllabus: ['Python', 'pandas', 'Visualization', 'scikit-learn', 'Model Eval'],
+    createdAt: '2024-09-10',
+  },
+  {
+    _id: 'c103',
+    title: 'Java Programming Masterclass',
+    category: 'Programming',
+    level: 'Beginner',
+    logo: 'https://raw.githubusercontent.com/devicons/devicon/master/icons/java/java-original.svg',
+    thumbnail: 'https://raw.githubusercontent.com/github/explore/main/topics/java/java.png',
+    description: 'Java fundamentals, OOP, collections, concurrency and practical projects.',
+    syllabus: ['Java Basics', 'OOP', 'Collections', 'Concurrency'],
+    createdAt: '2024-05-21',
+  },
+  {
+    _id: 'c104',
+    title: 'Mobile App Development with Flutter',
+    category: 'Mobile Development',
+    level: 'Intermediate',
+    logo: 'https://raw.githubusercontent.com/devicons/devicon/master/icons/flutter/flutter-original.svg',
+    thumbnail: 'https://raw.githubusercontent.com/github/explore/main/topics/flutter/flutter.png',
+    description: 'Build cross-platform mobile apps with Flutter and Dart — state management & deployment.',
+    syllabus: ['Dart', 'Widgets', 'State Management', 'Networking'],
+    createdAt: '2024-07-12',
+  },
+  {
+    _id: 'c105',
+    title: 'DevOps Fundamentals with Docker & Kubernetes',
+    category: 'DevOps',
+    level: 'Advanced',
+    logo: 'https://raw.githubusercontent.com/devicons/devicon/master/icons/docker/docker-original.svg',
+    thumbnail: 'https://raw.githubusercontent.com/github/explore/main/topics/docker/docker.png',
+    description: 'Containerization, orchestration, CI/CD, monitoring and scaling for production systems.',
+    syllabus: ['Docker', 'Kubernetes', 'CI/CD', 'Monitoring'],
+    createdAt: '2024-06-02',
+  },
+  {
+    _id: 'c106',
+    title: 'Deep Learning & Neural Networks (AI)',
+    category: 'AI & Deep Learning',
+    level: 'Advanced',
+    logo: 'https://raw.githubusercontent.com/konstantinmuenster/logo-icons/master/images/tensorflow.png',
+    thumbnail: 'https://miro.medium.com/v2/resize:fit:1200/1*ZQFZKZ7iM6r-mtMV3J0Rlg.png',
+    description: 'Neural networks, CNNs, RNNs and transformers with TensorFlow/PyTorch — practical projects.',
+    syllabus: ['Neural Nets', 'CNN', 'RNN', 'Transformers', 'Deployment'],
+    createdAt: '2024-10-01',
+  },
+  {
+    _id: 'c107',
+    title: 'UI/UX Design Principles',
+    category: 'Design',
+    level: 'Beginner',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/3/33/Figma-logo.svg',
+    thumbnail: 'https://images.unsplash.com/photo-1503602642458-232111445657?w=1200&q=80&auto=format&fit=crop',
+    description: 'Designa fundamentals, wireframing, prototyping and user testing using Figma and best practices.',
+    syllabus: ['Design Thinking', 'Wireframes', 'Prototyping', 'User Research'],
+    createdAt: '2024-04-18',
+  },
+  {
+    _id: 'c108',
+    title: 'Cloud Engineering with AWS',
+    category: 'Cloud',
+    level: 'Intermediate',
+    logo: 'https://a0.awsstatic.com/libra-css/images/logos/aws_smile_1200x630.png',
+    thumbnail: 'https://images.unsplash.com/photo-1526378723414-7a88a1b7f3b9?w=1200&q=80&auto=format&fit=crop',
+    description: 'Core AWS services, IaC, security, and deploying production workloads at scale.',
+    syllabus: ['EC2 & S3', 'IAM', 'VPC', 'CloudFormation', 'CI/CD'],
+    createdAt: '2024-03-30',
+  },
 ];
 
-const ITEMS_PER_PAGE = 1000; // temporarily large to show all courses while debugging
+const ITEMS_PER_PAGE = 6;
 
 const Courses = () => {
   const navigate = useNavigate();
@@ -72,15 +142,10 @@ const Courses = () => {
     const fetchCourses = async () => {
       setLoading(true);
       try {
-        // call the safe URL
-        const url = buildUrl('/api/courses');
-        const { data } = await axios.get(url);
-        // debug: log what backend returned
-        console.log('[Courses] fetched', Array.isArray(data) ? data.length : 'non-array', 'items from', url);
-
-        if (mounted && Array.isArray(data) && data.length > 0) {
+        const res = await axios.get(`${API_BASE}/courses`);
+        if (mounted && Array.isArray(res.data) && res.data.length > 0) {
           // ensure logo field exists for backend entries (optional)
-          const normalized = data.map(c => ({ ...c, logo: c.logo || c.thumbnail }));
+          const normalized = res.data.map(c => ({ ...c, logo: c.logo || c.thumbnail }));
           setCourses(normalized);
         } else if (mounted) {
           setCourses(fallbackCourses);
