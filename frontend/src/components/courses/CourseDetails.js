@@ -2,19 +2,17 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import {
-  Box, Typography, Button, Card, CardContent, CardMedia, Snackbar, Alert,
-} from '@mui/material';
+import { Box, Typography, Button, Card, CardContent, CardMedia, Snackbar, Alert } from '@mui/material';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
+// normalize API base to ALWAYS include /api at the end
+const RAW_API_BASE = process.env.REACT_APP_API_URL || 'https://smartlearn-nu.vercel.app/api';
+let API_BASE = String(RAW_API_BASE).replace(/\/+$/, '');
+if (!/\/api(\/|$)/i.test(API_BASE)) {
+  API_BASE = `${API_BASE.replace(/\/+$/, '')}/api`;
+}
 function buildUrl(path) {
-  const base = String(API_BASE).replace(/\/+$/, '');
-  let p = String(path).replace(/^\/+/, '');
-  if (base.toLowerCase().endsWith('/api') && /^api\/?/i.test(p)) {
-    p = p.replace(/^api\/?/i, '');
-  }
-  return `${base}/${p}`;
+  const p = String(path).replace(/^\/+/, '');
+  return `${API_BASE}/${p}`;
 }
 
 const CourseDetails = ({ refreshDashboard }) => {
@@ -27,46 +25,20 @@ const CourseDetails = ({ refreshDashboard }) => {
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    const fetchCourseFromList = async () => {
+    const fetchCourse = async () => {
       setLoading(true);
       try {
-        const url = buildUrl('/api/courses');
-        const { data } = await axios.get(url);
-        const list = Array.isArray(data) ? data : (data.courses || []);
-
-        // Matching strategies (in order)
-        const matches = (c) => {
-          if (!c) return false;
-          const cid = String(c._id ?? c.id ?? '');
-          if (cid === String(id)) return true;
-          if (String(parseInt(cid || '', 10)) === String(parseInt(id || '', 10))) return true;
-          const slug = (c.slug || '').toString().toLowerCase();
-          if (slug && slug === String(id).toLowerCase()) return true;
-          if (cid.includes(String(id))) return true;
-          if ((c.title || '').toLowerCase().includes(String(id).toLowerCase())) return true;
-          return false;
-        };
-
-        const found = list.find(matches);
-        if (found) {
-          setCourse(found);
-        } else {
-          setSnack({
-            open: true,
-            severity: 'warning',
-            msg: 'Course not found — server returned the list but no matching id.',
-          });
-          setCourse(null);
-        }
+        const { data } = await axios.get(buildUrl(`/courses/${id}`)); // GET /api/courses/:id
+        setCourse(data);
       } catch (err) {
-        setSnack({ open: true, severity: 'error', msg: 'Failed to load course list (network/CORS).' });
+        console.error('Failed to load course:', err);
+        setSnack({ open: true, severity: 'error', msg: err?.response?.data?.message || 'Failed to load course' });
         setCourse(null);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchCourseFromList();
+    if (id) fetchCourse();
   }, [id]);
 
   const handleCloseSnack = () => setSnack(s => ({ ...s, open: false }));
@@ -77,16 +49,14 @@ const CourseDetails = ({ refreshDashboard }) => {
       return;
     }
     try {
-      await axios.post(
-        buildUrl(`/api/courses/enroll/${id}`),
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // NOTE: backend route is /api/courses/enroll/:id (per your backend file)
+      await axios.post(buildUrl(`/courses/enroll/${id}`), {}, { headers: { Authorization: `Bearer ${token}` } });
       setEnrolled(true);
       if (typeof refreshDashboard === 'function') refreshDashboard();
       window.dispatchEvent(new Event('enrolledCoursesUpdated'));
       setSnack({ open: true, severity: 'success', msg: 'Enrolled successfully' });
     } catch (err) {
+      console.error('Enroll error:', err);
       setSnack({ open: true, severity: 'error', msg: err?.response?.data?.message || 'Enroll failed' });
     }
   };
@@ -97,43 +67,24 @@ const CourseDetails = ({ refreshDashboard }) => {
   return (
     <Box sx={{ p: 2 }}>
       <Card sx={{ display: 'flex', mb: 3 }}>
-        <CardMedia
-          component="img"
-          sx={{ width: 300 }}
-          image={course.thumbnail}
-          alt={course.title}
-        />
+        <CardMedia component="img" sx={{ width: 300 }} image={course.thumbnail} alt={course.title} />
         <CardContent>
           <Typography variant="h4" gutterBottom>{course.title}</Typography>
           <Typography variant="subtitle1" gutterBottom>{course.category} - {course.level}</Typography>
           <Typography variant="body1" paragraph>{course.description}</Typography>
           <Typography variant="h6">Syllabus:</Typography>
-          <ul>
-            {(course.syllabus || []).map((item, index) => <li key={index}>{item}</li>)}
-          </ul>
+          <ul>{(course.syllabus || []).map((item, idx) => <li key={idx}>{item}</li>)}</ul>
 
-          {!enrolled && (
-            <Button variant="contained" color="primary" onClick={handleEnroll}>
-              Enroll Now
-            </Button>
-          )}
-          {enrolled && (
-            <Button variant="outlined" color="success" disabled>
-              Enrolled
-            </Button>
+          {!enrolled ? (
+            <Button variant="contained" color="primary" onClick={handleEnroll}>Enroll Now</Button>
+          ) : (
+            <Button variant="outlined" color="success" disabled>Enrolled</Button>
           )}
         </CardContent>
       </Card>
 
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={3500}
-        onClose={handleCloseSnack}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={handleCloseSnack} severity={snack.severity} sx={{ width: '100%' }}>
-          {snack.msg}
-        </Alert>
+      <Snackbar open={snack.open} autoHideDuration={3500} onClose={handleCloseSnack} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={handleCloseSnack} severity={snack.severity} sx={{ width: '100%' }}>{snack.msg}</Alert>
       </Snackbar>
     </Box>
   );
